@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -58,19 +58,25 @@ namespace GA_MonteCarlo
 
             // Get values from the textboxes
             string areaPopulation = $"{txtAreaA.Text},{txtAreaB.Text},{txtAreaC.Text},{txtAreaD.Text}";
+            string steps = txtSteps.Text;
+            string generations = txtGenerations.Text;
+            string monteCarloRuns = txtMonteCarloRuns.Text;
             string hesitancyRate = txtHesitancyRate.Text;
             string productionRate = txtProductionRate.Text;
             string spoilageRate = txtSpoilageRate.Text;
+            string vaccineStockStart = txtVaccineStockStart.Text;
             string vaccinationDelay = txtVaccinationDelay.Text;
 
             var arguments = new StringBuilder();
             arguments.Append($"-u {scriptPath} ");
-            arguments.Append($"--area_population {areaPopulation} "); // Use the combined string
-            arguments.Append($"--steps {txtSteps.Text} ");
-            arguments.Append($"--generations {txtGenerations.Text} ");
+            arguments.Append($"--area_population {areaPopulation} ");
+            arguments.Append($"--steps {steps} ");
+            arguments.Append($"--generations {generations} ");
+            arguments.Append($"--monte_carlo_runs {monteCarloRuns} ");
             arguments.Append($"--hesitancy_rate {hesitancyRate} ");
             arguments.Append($"--vaccine_production_rate {productionRate} ");
             arguments.Append($"--vaccine_spoilage_rate {spoilageRate} ");
+            arguments.Append($"--vaccine_stock_start {vaccineStockStart} ");
             arguments.Append($"--vaccination_delay_days {vaccinationDelay} ");
 
             try
