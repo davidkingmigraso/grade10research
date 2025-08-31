@@ -7,18 +7,18 @@ from multiprocessing import Pool, cpu_count
 import argparse
 import sys
 
-# -------------------- USER-TUNABLE PARAMETERS (Defaults) --------------------
-# These values can now be overridden by command-line arguments.
+# -------------------- PARAMETERS --------------------
 grid_size = 2
 area_w = 12.0
 area_h = 12.0
 
 # disease params
-trans_radius = 1.8
-beta = 0.25
-sigma = 1/5.2
-gamma = 1/10.0
-mu = 0.005
+incubation_days = 8
+trans_distance = 0.1 # distance between infected and susceptable
+beta = 0.25        # chance that susceptible will be exposed
+sigma = 1/5.2      # chance that exposed will be infected after incubation_days
+gamma = 1/21.0     # recovery rate
+mu = 0.005         # chance of infected to dead
 
 # mobility
 move_scale = 0.6
@@ -142,14 +142,18 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
                     b = agents[j]
                     if b.state == S and b.area == a.area:
                         dx = a.x - b.x; dy = a.y - b.y
-                        if dx*dx + dy*dy <= trans_radius*trans_radius:
+                        # this is pythagorean theoream a^2 + b^2 = c^2
+                        if dx*dx + dy*dy <= trans_distance:
                             if np.random.rand() < beta:
                                 b.state = E
 
         for a in agents:
             if a.state == E:
-                if np.random.rand() < sigma:
-                    a.state = I; a.days = 0
+                if a.days >= incubation_days:
+                    if np.random.rand() < sigma:
+                        a.state = I; a.days = 0
+                    else:
+                        a.state = S; a.days = 0
             elif a.state == I:
                 if np.random.rand() < mu:
                     a.state = D
