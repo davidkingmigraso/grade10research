@@ -61,6 +61,7 @@ namespace GA_MonteCarlo
             string steps = txtSteps.Text;
             string generations = txtGenerations.Text;
             string monteCarloRuns = txtMonteCarloRuns.Text;
+            string populationSize = txtPopulationSize.Text; // New: Get population size
             string hesitancyRate = txtHesitancyRate.Text;
             string productionRate = txtProductionRate.Text;
             string spoilageRate = txtSpoilageRate.Text;
@@ -73,6 +74,7 @@ namespace GA_MonteCarlo
             arguments.Append($"--steps {steps} ");
             arguments.Append($"--generations {generations} ");
             arguments.Append($"--monte_carlo_runs {monteCarloRuns} ");
+            arguments.Append($"--population_size {populationSize} "); // New: Pass population size
             arguments.Append($"--hesitancy_rate {hesitancyRate} ");
             arguments.Append($"--vaccine_production_rate {productionRate} ");
             arguments.Append($"--vaccine_spoilage_rate {spoilageRate} ");
