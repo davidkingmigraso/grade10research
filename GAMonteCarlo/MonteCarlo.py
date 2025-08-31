@@ -87,7 +87,7 @@ class Agent:
             new_y = np.clip(new_y, y0, y0 + area_h)
         self.x = new_x; self.y = new_y
 
-def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_stock_start, vaccination_delay_days, animate_and_plot=False):
+def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days, animate_and_plot=False):
     agents = []
     aid = 0
     for area_idx, popn in enumerate(area_population):
@@ -101,8 +101,11 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
 
     history_per_area = [ {s: [] for s in state_names} for _ in range(n_areas) ]
     history_total = {s: [] for s in state_names}
-    vaccine_stock = vaccine_stock_start # Initial stock from parameter
-    vaccine_stock_history = []
+    
+    # New: Per-area vaccine stock and history
+    vaccine_stock = [0] * n_areas 
+    vaccine_stock_history = [[] for _ in range(n_areas)]
+
     agent_history = []
     day_counter = 0
     total_population = sum(area_population)
@@ -125,7 +128,7 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
         return res
 
     def sim_step():
-        nonlocal vaccine_stock, day_counter
+        nonlocal day_counter, vaccine_total
         day_counter += 1
 
         for a in agents: a.step_move()
@@ -155,23 +158,36 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
             a.days += 1
 
         if day_counter > vaccination_delay_days:
-            available_doses = vaccine_production_rate
+            # New: Distribute production to each area's stock
             for aidx in range(n_areas):
-                # Distribute vaccines based on the ratio for this area
-                doses_to_distribute = int(available_doses * vaccine_distribution[aidx])
+                doses_to_distribute = int(vaccine_total * vaccine_distribution[aidx])
+                
+                # Check if enough vaccines are available
+                if vaccine_total >= doses_to_distribute:
+                    vaccine_stock[aidx] += doses_to_distribute
+                    vaccine_total -= doses_to_distribute
 
-                if doses_to_distribute > 0 and vaccine_stock > 0:
+                # New: Vaccinate from the local area stock
+                if vaccine_stock[aidx] > 0:
                     susceptibles_in_area = [p for p in agents if p.state == S and p.area == aidx]
                     if susceptibles_in_area:
-                        chosen = np.random.choice(susceptibles_in_area, min(doses_to_distribute, len(susceptibles_in_area), vaccine_stock), replace=False)
+                        doses_to_use = min(len(susceptibles_in_area), vaccine_stock[aidx])
+                        chosen = np.random.choice(susceptibles_in_area, doses_to_use, replace=False)
                         for p in chosen:
                             if np.random.rand() > hesitancy_rate:
-                                p.state = V; p.vaccinated = True; vaccine_stock -= 1
+                                p.state = V; p.vaccinated = True; vaccine_stock[aidx] -= 1
+        
+        # New: Handle spoilage per area
+        for aidx in range(n_areas):
+            spoiled = int(vaccine_stock[aidx] * vaccine_spoilage_rate)
+            vaccine_stock[aidx] = max(0, vaccine_stock[aidx] - spoiled)
 
-        vaccine_stock += vaccine_production_rate
-        spoiled = int(vaccine_stock * vaccine_spoilage_rate)
-        vaccine_stock = max(0, vaccine_stock - spoiled)
-        vaccine_stock_history.append(vaccine_stock)
+        # New: Record per-area vaccine stock history
+        for aidx in range(n_areas):
+            vaccine_stock_history[aidx].append(vaccine_stock[aidx])
+        
+        # Increase vaccine_total by vaccine_production_rate
+        vaccine_total += vaccine_production_rate
 
         for aidx in range(n_areas):
             counts = [0]*6
@@ -199,7 +215,10 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
         sc = ax.scatter([p.x for p in agents],[p.y for p in agents], c=[state_colors[p.state] for p in agents], s=16)
         legend_lines = [plt.Line2D([0],[0], marker='o', color='w', markerfacecolor=state_colors[i], markersize=8) for i in range(6)]
         ax.legend(legend_lines, state_names, loc='upper right', title='States')
-        vax_text = ax.text(0.02, 0.98, '', transform=ax.transAxes, va='top', fontsize=9)
+        
+        # New: Display per-area vaccine stock
+        stock_text_display = [ax.text(x0 + area_w*0.5, y0 + area_h*0.8, '', ha='center', va='top', fontsize=8) for aidx, (x0,y0) in area_coords.items()]
+        day_text = ax.text(0.02, 0.98, '', transform=ax.transAxes, va='top', fontsize=9)
 
         def anim_update(frame):
             sim_step()
@@ -208,8 +227,13 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
             colors = [state_colors[a.state] for a in agents]
             sc.set_offsets(np.c_[x_coords, y_coords])
             sc.set_color(colors)
-            vax_text.set_text(f"Day {day_counter}  |  Vaccines: {vaccine_stock}")
-            return (sc, vax_text)
+
+            # Update day and stock display
+            day_text.set_text(f"Day {day_counter}")
+            for aidx in range(n_areas):
+                stock_text_display[aidx].set_text(f"Stock: {vaccine_stock[aidx]}")
+                
+            return (sc, day_text) + tuple(stock_text_display)
 
         ani = animation.FuncAnimation(fig, anim_update, frames=steps, interval=50, blit=True, repeat=False)
         plt.show()
@@ -229,7 +253,11 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
         axs[5].axis('off')
         plt.tight_layout(); plt.show()
 
-        plt.figure(figsize=(8,3)); plt.plot(vaccine_stock_history, label='vaccine_stock'); plt.xlabel('Day'); plt.ylabel('Stock'); plt.title('Vaccine stock over time'); plt.grid(alpha=0.2); plt.show()
+        # New: Plot per-area vaccine stock
+        plt.figure(figsize=(8,4)); plt.title("Vaccine stock over time by Area"); plt.xlabel("Day"); plt.ylabel("Stock"); plt.grid(alpha=0.2)
+        for aidx in range(n_areas):
+            plt.plot(vaccine_stock_history[aidx], label=f'Area {aidx}');
+        plt.legend(); plt.show()
 
     else:
         for _ in range(steps):
@@ -258,7 +286,7 @@ def save_data(data, filename):
         filename,
         history_per_area=hist_per_area_dict,
         history_total=data['history_total'],
-        vaccine_stock_history=data['vaccine_stock_history'],
+        vaccine_stock_history=np.array(data['vaccine_stock_history']),
         agent_history=data['agent_history']
     )
 
@@ -278,15 +306,15 @@ def initialize_population(population_size):
 
 def _run_single_mc_run(params):
     """Wrapper function to run a single Monte Carlo simulation."""
-    distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_stock_start, vaccination_delay_days = params
-    data = run_simulation(distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_stock_start, vaccination_delay_days)
+    distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days = params
+    data = run_simulation(distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days)
     total_infected = data['history_total']['I'][-1]
     total_deceased = data['history_total']['D'][-1]
     return total_infected + total_deceased
 
-def fitness(distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_stock_start, vaccination_delay_days, monte_carlo_runs):
+def fitness(distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days, monte_carlo_runs):
     """Calculates fitness by running Monte Carlo simulations in parallel."""
-    params_list = [(distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_stock_start, vaccination_delay_days)] * monte_carlo_runs
+    params_list = [(distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days)] * monte_carlo_runs
     with Pool(num_processes) as p:
         scores = p.map(_run_single_mc_run, params_list)
     return sum(scores) / monte_carlo_runs
@@ -313,13 +341,13 @@ def mutate(child, mutation_rate):
         child[idx2] = max(0.0, child[idx2] - amount)
     return normalize_distribution(child)
 
-def run_ga(area_population, steps, generations, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_stock_start, vaccination_delay_days, monte_carlo_runs):
+def run_ga(area_population, steps, generations, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days, monte_carlo_runs):
     print("Starting genetic algorithm to find optimal vaccine distribution...")
     population = initialize_population(population_size)
     best_fitness_history = []
 
     for generation in range(generations):
-        fitness_scores = [fitness(dist, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_stock_start, vaccination_delay_days, monte_carlo_runs) for dist in population]
+        fitness_scores = [fitness(dist, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days, monte_carlo_runs) for dist in population]
 
         best_fitness = min(fitness_scores)
         best_dist = population[fitness_scores.index(best_fitness)]
@@ -338,7 +366,7 @@ def run_ga(area_population, steps, generations, hesitancy_rate, vaccine_producti
         population = new_population
 
     print("\nGenetic Algorithm complete. Finding optimal and worst distribution...")
-    final_fitness_scores = [fitness(dist, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_stock_start, vaccination_delay_days, monte_carlo_runs) for dist in population]
+    final_fitness_scores = [fitness(dist, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days, monte_carlo_runs) for dist in population]
     optimal_distribution = population[final_fitness_scores.index(min(final_fitness_scores))]
     worst_distribution = population[final_fitness_scores.index(max(final_fitness_scores))]
 
@@ -347,10 +375,10 @@ def run_ga(area_population, steps, generations, hesitancy_rate, vaccine_producti
 
     # Run and save final best and worst runs for replay
     print("\nRunning and saving final best and worst strategies...")
-    best_run_data = run_simulation(optimal_distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_stock_start, vaccination_delay_days, animate_and_plot=False)
+    best_run_data = run_simulation(optimal_distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days, animate_and_plot=False)
     save_data(best_run_data, "best_strategy_results.npz")
 
-    worst_run_data = run_simulation(worst_distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_stock_start, vaccination_delay_days, animate_and_plot=False)
+    worst_run_data = run_simulation(worst_distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days, animate_and_plot=False)
     save_data(worst_run_data, "worst_strategy_results.npz")
 
     print("Simulation data for best and worst strategies saved.")
@@ -366,7 +394,7 @@ def parse_args():
     parser.add_argument("--hesitancy_rate", type=float, default=0.2, help="Rate of vaccine hesitancy.")
     parser.add_argument("--vaccine_production_rate", type=int, default=2, help="Daily vaccine production rate.")
     parser.add_argument("--vaccine_spoilage_rate", type=float, default=0.01, help="Daily vaccine spoilage rate.")
-    parser.add_argument("--vaccine_stock_start", type=int, default=200, help="Initial vaccine stock.")
+    parser.add_argument("--vaccine_total", type=int, default=200, help="Initial total vaccine stock.")
     parser.add_argument("--vaccination_delay_days", type=int, default=7, help="Days before vaccination begins.")
     return parser.parse_args()
 
@@ -382,12 +410,12 @@ if __name__ == "__main__":
     hesitancy_rate = args.hesitancy_rate
     vaccine_production_rate = args.vaccine_production_rate
     vaccine_spoilage_rate = args.vaccine_spoilage_rate
-    vaccine_stock_start = args.vaccine_stock_start
+    vaccine_total = args.vaccine_total
     vaccination_delay_days = args.vaccination_delay_days
 
     total_population = sum(area_population)
 
-    best_fitness_history = run_ga(area_population, steps, generations, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_stock_start, vaccination_delay_days, monte_carlo_runs)
+    best_fitness_history = run_ga(area_population, steps, generations, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days, monte_carlo_runs)
 
     try:
         np.savez_compressed('genetic_algorithm_performance_data.npz', best_fitness_history=np.array(best_fitness_history))

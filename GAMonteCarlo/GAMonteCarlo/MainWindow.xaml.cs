@@ -76,7 +76,7 @@ namespace GA_MonteCarlo
             arguments.Append($"--hesitancy_rate {hesitancyRate} ");
             arguments.Append($"--vaccine_production_rate {productionRate} ");
             arguments.Append($"--vaccine_spoilage_rate {spoilageRate} ");
-            arguments.Append($"--vaccine_stock_start {vaccineStockStart} ");
+            arguments.Append($"--vaccine_total {vaccineStockStart} ");
             arguments.Append($"--vaccination_delay_days {vaccinationDelay} ");
 
             try
