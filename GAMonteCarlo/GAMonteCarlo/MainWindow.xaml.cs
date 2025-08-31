@@ -19,23 +19,27 @@ namespace GA_MonteCarlo
 
         private async void BtnRunSimulation_Click(object sender, RoutedEventArgs e)
         {
+            // Disable run button and enable cancel button
             btnRunSimulation.IsEnabled = false;
+            btnCancelSimulation.IsEnabled = true;
+
             txtOutput.Document.Blocks.Clear();
             AppendOutput("Starting Python simulation...\n");
 
             string pythonPath = "python";
-            string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "simulation_interface.py");
+            string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MonteCarlo.py");
 
             if (!File.Exists(scriptPath))
             {
                 AppendOutput($"[ERROR] Python script not found at {scriptPath}.");
-                AppendOutput("Please ensure 'simulation_interface.py' is in the same directory as this executable.");
+                AppendOutput("Please ensure 'MonteCarlo.py' is in the same directory as this executable.");
                 btnRunSimulation.IsEnabled = true;
+                btnCancelSimulation.IsEnabled = false;
                 return;
             }
 
             var arguments = new StringBuilder();
-            arguments.Append($"{scriptPath} ");
+            arguments.Append($"-u {scriptPath} ");
             arguments.Append($"--grid_size {txtGridSize.Text} ");
             arguments.Append($"--area_population {txtAreaPopulation.Text} ");
             arguments.Append($"--steps {txtSteps.Text} ");
@@ -82,11 +86,23 @@ namespace GA_MonteCarlo
 
                 await Task.Run(() => pythonProcess.WaitForExit());
 
-                Dispatcher.Invoke(() =>
+                // Check if the process exited normally or was killed
+                if (pythonProcess.ExitCode == 0)
                 {
-                    AppendOutput("\n--- Simulation Complete ---");
-                    AppendOutput($"Exit Code: {pythonProcess.ExitCode}");
-                });
+                    Dispatcher.Invoke(() =>
+                    {
+                        AppendOutput("\n--- Simulation Complete ---");
+                        AppendOutput($"Exit Code: {pythonProcess.ExitCode}");
+                    });
+                }
+                else
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        AppendOutput("\n--- Simulation Terminated ---");
+                        AppendOutput("The process was terminated by the user.");
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -98,7 +114,29 @@ namespace GA_MonteCarlo
             }
             finally
             {
-                Dispatcher.Invoke(() => btnRunSimulation.IsEnabled = true);
+                // Re-enable run button and disable cancel button
+                Dispatcher.Invoke(() =>
+                {
+                    btnRunSimulation.IsEnabled = true;
+                    btnCancelSimulation.IsEnabled = false;
+                });
+            }
+        }
+
+        private void BtnCancelSimulation_Click(object sender, RoutedEventArgs e)
+        {
+            if (pythonProcess != null && !pythonProcess.HasExited)
+            {
+                try
+                {
+                    AppendOutput("\nTerminating Python process...");
+                    pythonProcess.Kill();
+                    AppendOutput("Process terminated.");
+                }
+                catch (Exception ex)
+                {
+                    AppendOutput($"[ERROR] Failed to terminate process: {ex.Message}");
+                }
             }
         }
 

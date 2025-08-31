@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Blend for Visual Studio Version 17
-VisualStudioVersion = 17.14.36414.22 d17.14
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36414.22
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GA MonteCarlo", "GA MonteCarlo\GA MonteCarlo.csproj", "{6E7E8D5A-5B2F-4434-832F-D205EFCEA4AA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GAMonteCarlo", "GAMonteCarlo\GAMonteCarlo.csproj", "{6E7E8D5A-5B2F-4434-832F-D205EFCEA4AA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

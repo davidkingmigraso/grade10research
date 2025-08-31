@@ -36,7 +36,10 @@
 
         <CheckBox x:Name="chkAnimate" Grid.Row="4" Grid.Column="1" Content="Show Animation" Margin="5"/>
 
-        <Button x:Name="btnRunSimulation" Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Content="Run Simulation" Margin="5" Height="30" Click="BtnRunSimulation_Click"/>
+        <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button x:Name="btnRunSimulation" Content="Run Simulation" Margin="5" Width="150" Height="30" Click="BtnRunSimulation_Click"/>
+            <Button x:Name="btnCancelSimulation" Content="Cancel Simulation" Margin="5" Width="150" Height="30" Click="BtnCancelSimulation_Click" IsEnabled="False"/>
+        </StackPanel>
 
         <RichTextBox x:Name="txtOutput" Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" IsReadOnly="True" VerticalScrollBarVisibility="Auto" Background="#F0F0F0" Margin="5"/>
     </Grid>
