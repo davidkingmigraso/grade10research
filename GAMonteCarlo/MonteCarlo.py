@@ -101,9 +101,9 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
 
     history_per_area = [ {s: [] for s in state_names} for _ in range(n_areas) ]
     history_total = {s: [] for s in state_names}
-    
+
     # New: Per-area vaccine stock and history
-    vaccine_stock = [0] * n_areas 
+    vaccine_stock = [0] * n_areas
     vaccine_stock_history = [[] for _ in range(n_areas)]
 
     agent_history = []
@@ -165,7 +165,7 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
             # New: Distribute production to each area's stock
             for aidx in range(n_areas):
                 doses_to_distribute = int(vaccine_total * vaccine_distribution[aidx])
-                
+
                 # Check if enough vaccines are available
                 if vaccine_total >= doses_to_distribute:
                     vaccine_stock[aidx] += doses_to_distribute
@@ -180,7 +180,7 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
                         for p in chosen:
                             if np.random.rand() > hesitancy_rate:
                                 p.state = V; p.vaccinated = True; vaccine_stock[aidx] -= 1
-        
+
         # New: Handle spoilage per area
         for aidx in range(n_areas):
             spoiled = int(vaccine_stock[aidx] * vaccine_spoilage_rate)
@@ -189,7 +189,7 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
         # New: Record per-area vaccine stock history
         for aidx in range(n_areas):
             vaccine_stock_history[aidx].append(vaccine_stock[aidx])
-        
+
         # Increase vaccine_total by vaccine_production_rate
         vaccine_total += vaccine_production_rate
 
@@ -219,7 +219,7 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
         sc = ax.scatter([p.x for p in agents],[p.y for p in agents], c=[state_colors[p.state] for p in agents], s=16)
         legend_lines = [plt.Line2D([0],[0], marker='o', color='w', markerfacecolor=state_colors[i], markersize=8) for i in range(6)]
         ax.legend(legend_lines, state_names, loc='upper right', title='States')
-        
+
         # New: Display per-area vaccine stock
         stock_text_display = [ax.text(x0 + area_w*0.5, y0 + area_h*0.8, '', ha='center', va='top', fontsize=8) for aidx, (x0,y0) in area_coords.items()]
         day_text = ax.text(0.02, 0.98, '', transform=ax.transAxes, va='top', fontsize=9)
@@ -236,7 +236,7 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
             day_text.set_text(f"Day {day_counter}")
             for aidx in range(n_areas):
                 stock_text_display[aidx].set_text(f"Stock: {vaccine_stock[aidx]}")
-                
+
             return (sc, day_text) + tuple(stock_text_display)
 
         ani = animation.FuncAnimation(fig, anim_update, frames=steps, interval=50, blit=True, repeat=False)
@@ -295,9 +295,9 @@ def save_data(data, filename):
     )
 
 def normalize_distribution(dist):
-    """Ensures the sum of the distribution equals 1.0."""
+    """Ensures the sum of the distribution equals 1.0. Adds robustness for non-positive sums."""
     total = sum(dist)
-    if total == 0:
+    if total <= 0:
         return [1.0 / n_areas] * n_areas
     return [x / total for x in dist]
 
@@ -308,8 +308,8 @@ def initialize_population(population_size):
         population.append(normalize_distribution(dist))
     return population
 
-def _run_single_mc_run(params):
-    """Wrapper function to run a single Monte Carlo simulation."""
+def _evaluate_distribution_for_run(params):
+    """Wrapper function to run a single Monte Carlo simulation for fitness evaluation."""
     distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days = params
     data = run_simulation(distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days)
     total_infected = data['history_total']['I'][-1]
@@ -320,7 +320,7 @@ def fitness(distribution, area_population, steps, hesitancy_rate, vaccine_produc
     """Calculates fitness by running Monte Carlo simulations in parallel."""
     params_list = [(distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days)] * monte_carlo_runs
     with Pool(num_processes) as p:
-        scores = p.map(_run_single_mc_run, params_list)
+        scores = p.map(_evaluate_distribution_for_run, params_list)
     return sum(scores) / monte_carlo_runs
 
 def select_parents(population, fitness_scores):
