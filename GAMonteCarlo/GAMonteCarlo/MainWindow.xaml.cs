@@ -15,6 +15,24 @@ namespace GA_MonteCarlo
         public MainWindow()
         {
             InitializeComponent();
+            LoadReplayFiles();
+        }
+
+        private void LoadReplayFiles()
+        {
+            try
+            {
+                var files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.npz");
+                lbxReplayFiles.Items.Clear();
+                foreach (var file in files)
+                {
+                    lbxReplayFiles.Items.Add(Path.GetFileName(file));
+                }
+            }
+            catch (Exception ex)
+            {
+                AppendOutput($"[ERROR] Could not load replay files: {ex.Message}");
+            }
         }
 
         private async void BtnRunSimulation_Click(object sender, RoutedEventArgs e)
@@ -38,16 +56,22 @@ namespace GA_MonteCarlo
                 return;
             }
 
+            // Get values from the textboxes
+            string areaPopulation = $"{txtAreaA.Text},{txtAreaB.Text},{txtAreaC.Text},{txtAreaD.Text}";
+            string hesitancyRate = txtHesitancyRate.Text;
+            string productionRate = txtProductionRate.Text;
+            string spoilageRate = txtSpoilageRate.Text;
+            string vaccinationDelay = txtVaccinationDelay.Text;
+
             var arguments = new StringBuilder();
             arguments.Append($"-u {scriptPath} ");
-            arguments.Append($"--grid_size {txtGridSize.Text} ");
-            arguments.Append($"--area_population {txtAreaPopulation.Text} ");
+            arguments.Append($"--area_population {areaPopulation} "); // Use the combined string
             arguments.Append($"--steps {txtSteps.Text} ");
             arguments.Append($"--generations {txtGenerations.Text} ");
-            if (chkAnimate.IsChecked == true)
-            {
-                arguments.Append("--animate");
-            }
+            arguments.Append($"--hesitancy_rate {hesitancyRate} ");
+            arguments.Append($"--vaccine_production_rate {productionRate} ");
+            arguments.Append($"--vaccine_spoilage_rate {spoilageRate} ");
+            arguments.Append($"--vaccination_delay_days {vaccinationDelay} ");
 
             try
             {
@@ -119,6 +143,7 @@ namespace GA_MonteCarlo
                 {
                     btnRunSimulation.IsEnabled = true;
                     btnCancelSimulation.IsEnabled = false;
+                    LoadReplayFiles(); // Reload files after simulation
                 });
             }
         }
@@ -137,6 +162,85 @@ namespace GA_MonteCarlo
                 {
                     AppendOutput($"[ERROR] Failed to terminate process: {ex.Message}");
                 }
+            }
+        }
+
+        private async void BtnReplay_Click(object sender, RoutedEventArgs e)
+        {
+            if (lbxReplayFiles.SelectedItem == null)
+            {
+                AppendOutput("[ERROR] Please select a file to replay.");
+                return;
+            }
+
+            btnReplay.IsEnabled = false;
+
+            string selectedFile = lbxReplayFiles.SelectedItem.ToString();
+            AppendOutput($"Replaying simulation from file: {selectedFile}...\n");
+
+            string pythonPath = "python";
+            string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MonteCarloReplay.py");
+
+            if (!File.Exists(scriptPath))
+            {
+                AppendOutput($"[ERROR] Python script not found at {scriptPath}.");
+                AppendOutput("Please ensure 'MonteCarloReplay.py' is in the same directory as this executable.");
+                btnReplay.IsEnabled = true;
+                return;
+            }
+
+            var arguments = new StringBuilder();
+            arguments.Append($"-u {scriptPath} ");
+            arguments.Append($"\"{selectedFile}\"");
+
+            try
+            {
+                var replayProcess = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = pythonPath,
+                        Arguments = arguments.ToString(),
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+
+                replayProcess.OutputDataReceived += (s, ev) =>
+                {
+                    if (!string.IsNullOrEmpty(ev.Data))
+                    {
+                        Dispatcher.Invoke(() => AppendOutput(ev.Data));
+                    }
+                };
+
+                replayProcess.ErrorDataReceived += (s, ev) =>
+                {
+                    if (!string.IsNullOrEmpty(ev.Data))
+                    {
+                        Dispatcher.Invoke(() => AppendOutput("[ERROR] " + ev.Data));
+                    }
+                };
+
+                replayProcess.Start();
+                replayProcess.BeginOutputReadLine();
+                replayProcess.BeginErrorReadLine();
+
+                await Task.Run(() => replayProcess.WaitForExit());
+                AppendOutput("\n--- Replay Complete ---");
+            }
+            catch (Exception ex)
+            {
+                AppendOutput($"[ERROR] An error occurred during replay: {ex.Message}");
+            }
+            finally
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    btnReplay.IsEnabled = true;
+                });
             }
         }
 
