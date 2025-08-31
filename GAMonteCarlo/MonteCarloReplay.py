@@ -30,7 +30,7 @@ def plot_results(data, label=""):
     history_total = data['history_total'].item()
     vaccine_stock_history = data['vaccine_stock_history']
     agent_history = data['agent_history']
-    steps = len(vaccine_stock_history)
+    steps = len(vaccine_stock_history[0]) if len(vaccine_stock_history) > 0 else 0
 
     # --- Animation Replay ---
     fig, ax = plt.subplots(figsize=(7,7))
@@ -51,9 +51,12 @@ def plot_results(data, label=""):
     legend_lines = [plt.Line2D([0],[0], marker='o', color='w', markerfacecolor=state_colors[i], markersize=8) for i in range(6)]
     ax.legend(legend_lines, state_names, loc='upper right', title='States')
     
-    # Day and vaccine text
-    vax_text = ax.text(0.02, 0.98, '', transform=ax.transAxes, va='top', fontsize=9)
+    # Day text
+    day_text = ax.text(0.02, 0.98, '', transform=ax.transAxes, va='top', fontsize=9)
     
+    # Per-area vaccine stock text displays
+    stock_text_display = [ax.text(x0 + area_w * 0.5, y0 + area_h * 0.8, '', ha='center', va='top', fontsize=8) for aidx, (x0, y0) in area_coords.items()]
+
     def anim_update(frame):
         # Update positions and colors from the pre-computed history
         if frame < steps:
@@ -62,8 +65,16 @@ def plot_results(data, label=""):
             colors = [state_colors[d['state']] for d in agent_history[frame]]
             sc.set_offsets(np.c_[x_coords, y_coords])
             sc.set_color(colors)
-            vax_text.set_text(f"Day {frame+1}  |  Vaccines: {vaccine_stock_history[frame]}")
-        return (sc, vax_text)
+            
+            # Update day text
+            day_text.set_text(f"Day {frame+1}")
+
+            # Update per-area vaccine stock
+            for aidx in range(n_areas):
+                current_stock = vaccine_stock_history[aidx][frame]
+                stock_text_display[aidx].set_text(f"Stock: {current_stock}")
+
+        return (sc, day_text) + tuple(stock_text_display)
     
     ani = animation.FuncAnimation(fig, anim_update, frames=steps, interval=interval_ms, blit=True, repeat=False)
     plt.show()
@@ -85,7 +96,7 @@ def plot_results(data, label=""):
     axs[5].axis('off')
     plt.tight_layout(); plt.show()
 
-    plt.figure(figsize=(8,3)); plt.plot(vaccine_stock_history, label='vaccine_stock'); plt.xlabel('Day'); plt.ylabel('Stock'); plt.title(f"Vaccine stock over time ({label})"); plt.grid(alpha=0.2); plt.show()
+    plt.figure(figsize=(8,3)); plt.plot(vaccine_stock_history.T, label=[f'Area {i}' for i in range(n_areas)]); plt.xlabel('Day'); plt.ylabel('Stock'); plt.title(f"Vaccine stock over time ({label})"); plt.grid(alpha=0.2); plt.legend(); plt.show()
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
