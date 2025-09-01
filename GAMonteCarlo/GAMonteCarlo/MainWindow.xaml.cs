@@ -158,6 +158,7 @@ namespace GA_MonteCarlo
 
         private void BtnCancelSimulation_Click(object sender, RoutedEventArgs e)
         {
+            txtOutput.Document.Blocks.Clear();
             if (pythonProcess != null && !pythonProcess.HasExited)
             {
                 try
@@ -175,6 +176,8 @@ namespace GA_MonteCarlo
 
         private async void BtnReplay_Click(object sender, RoutedEventArgs e)
         {
+            txtOutput.Document.Blocks.Clear();
+
             if (lbxReplayFiles.SelectedItem == null)
             {
                 AppendOutput("[ERROR] Please select a file to replay.");
@@ -216,9 +219,8 @@ namespace GA_MonteCarlo
                         UseShellExecute = false,
                         CreateNoWindow = true
                     }
-                    StartInfo.EnvironmentVariables["REPLAY_INTERVAL_MS"] = "100";
-
                 };
+                replayProcess.StartInfo.EnvironmentVariables["REPLAY_INTERVAL_MS"] = txtReplayDelayMs.Text;
 
                 replayProcess.OutputDataReceived += (s, ev) =>
                 {
