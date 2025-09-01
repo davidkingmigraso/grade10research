@@ -342,6 +342,7 @@ def run_ga(area_population, steps, generations, population_size, hesitancy_rate,
 
     print("\nGenetic Algorithm complete. Finding optimal and worst distribution...")
 
+    # Run and save final best and worst runs for replay
     final_results = [fitness(dist, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days, monte_carlo_runs) for dist in population]
     final_fitness_scores_only = [score for score, data in final_results]
 
@@ -356,12 +357,9 @@ def run_ga(area_population, steps, generations, population_size, hesitancy_rate,
     print(f"\nOptimal Vaccine Distribution found: {[f'{x:.2f}' for x in optimal_distribution]}")
     print(f"\nWorst Vaccine Distribution found: {[f'{x:.2f}' for x in worst_distribution]}")
 
-    # Run and save final best and worst runs for replay
-    print("\nRunning and saving final best and worst strategies...")
-    best_run_data = run_simulation(optimal_distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days)
+    # Save final best and worst runs for replay
+    print("\nSaving final best and worst strategies...")
     save_data(best_run_data, "best_strategy_results.npz")
-
-    worst_run_data = run_simulation(worst_distribution, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days)
     save_data(worst_run_data, "worst_strategy_results.npz")
 
     print("Simulation data for best and worst strategies saved.")
