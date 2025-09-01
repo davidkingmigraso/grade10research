@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import sys
+import os
 
 # -------------------- UTILITY PARAMETERS --------------------
 grid_size = 2
@@ -12,7 +13,7 @@ area_population = [100, 100, 100, 100]
 total_population = sum(area_population)
 area_w = 12.0
 area_h = 12.0
-interval_ms = 100
+interval_ms = int(os.getenv('REPLAY_INTERVAL_MS', '100'))
 
 # area coords
 area_coords = {}

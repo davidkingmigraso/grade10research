@@ -216,6 +216,8 @@ namespace GA_MonteCarlo
                         UseShellExecute = false,
                         CreateNoWindow = true
                     }
+                    StartInfo.EnvironmentVariables["REPLAY_INTERVAL_MS"] = "100";
+
                 };
 
                 replayProcess.OutputDataReceived += (s, ev) =>
