@@ -192,7 +192,8 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
             vaccine_stock_history[aidx].append(vaccine_stock[aidx])
 
         # Increase vaccine_total by vaccine_production_rate
-        vaccine_total += vaccine_production_rate
+        if day_counter > vaccination_delay_days and day_counter % vaccination_delay_days == 0:
+            vaccine_total += vaccine_production_rate
 
         for aidx in range(n_areas):
             counts = [0]*6
@@ -285,7 +286,7 @@ def select_parents(population, fitness_scores):
     # Tournament selection
     parents = []
     for _ in range(2):
-        contenders = random.sample(list(zip(population, fitness_scores)), 5)
+        contenders = random.sample(list(zip(population, fitness_scores)), min(5, options.population_size))
         winner = min(contenders, key=lambda x: x[1])[0]
         parents.append(winner)
     return parents[0], parents[1]
@@ -375,7 +376,7 @@ def parse_args():
     parser.add_argument("--monte_carlo_runs", type=int, default=10, help="Number of simulations to run per strategy for a robust average.")
     parser.add_argument("--population_size", type=int, default=50, help="Number of individuals in the genetic algorithm population.")
     parser.add_argument("--hesitancy_rate", type=float, default=0.2, help="Rate of vaccine hesitancy.")
-    parser.add_argument("--vaccine_production_rate", type=int, default=2, help="Daily vaccine production rate.")
+    parser.add_argument("--vaccine_production_rate", type=int, default=4, help="Daily vaccine production rate.")
     parser.add_argument("--vaccine_spoilage_rate", type=float, default=0.01, help="Daily vaccine spoilage rate.")
     parser.add_argument("--vaccine_total", type=int, default=200, help="Initial total vaccine stock.")
     parser.add_argument("--vaccination_delay_days", type=int, default=0, help="Days before vaccination begins.")
@@ -383,19 +384,20 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    global options
+    options = parse_args()
 
     # Update parameters with command-line arguments
-    area_population = [int(p) for p in args.area_population.split(',')]
-    steps = args.steps
-    generations = args.generations
-    monte_carlo_runs = args.monte_carlo_runs
-    population_size = args.population_size
-    hesitancy_rate = args.hesitancy_rate
-    vaccine_production_rate = args.vaccine_production_rate
-    vaccine_spoilage_rate = args.vaccine_spoilage_rate
-    vaccine_total = args.vaccine_total
-    vaccination_delay_days = args.vaccination_delay_days
+    area_population = [int(p) for p in options.area_population.split(',')]
+    steps = options.steps
+    generations = options.generations
+    monte_carlo_runs = options.monte_carlo_runs
+    population_size = options.population_size
+    hesitancy_rate = options.hesitancy_rate
+    vaccine_production_rate = options.vaccine_production_rate
+    vaccine_spoilage_rate = options.vaccine_spoilage_rate
+    vaccine_total = options.vaccine_total
+    vaccination_delay_days = options.vaccination_delay_days
 
     total_population = sum(area_population)
 
