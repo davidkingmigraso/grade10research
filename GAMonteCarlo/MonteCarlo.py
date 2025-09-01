@@ -52,10 +52,11 @@ for idx in range(n_areas):
     area_coords[idx] = (col*area_w, row*area_h)
 
 class Agent:
-    __slots__ = ('id','area','x','y','state','days','vaccinated')
+    __slots__ = ('id','area','home_area','x','y','state','days','vaccinated')
     def __init__(self, aid, area):
         self.id = aid
-        self.area = area
+        self.area = area      # Agent's current area
+        self.home_area = area # Agent's original, permanent home area
         x0,y0 = area_coords[area]
         self.x = np.random.uniform(x0, x0 + area_w)
         self.y = np.random.uniform(y0, y0 + area_h)
@@ -340,9 +341,17 @@ def run_ga(area_population, steps, generations, population_size, hesitancy_rate,
         population = new_population
 
     print("\nGenetic Algorithm complete. Finding optimal and worst distribution...")
-    final_fitness_scores = [fitness(dist, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days, monte_carlo_runs) for dist in population]
-    optimal_distribution = population[final_fitness_scores.index(min(final_fitness_scores))]
-    worst_distribution = population[final_fitness_scores.index(max(final_fitness_scores))]
+
+    final_results = [fitness(dist, area_population, steps, hesitancy_rate, vaccine_production_rate, vaccine_spoilage_rate, vaccine_total, vaccination_delay_days, monte_carlo_runs) for dist in population]
+    final_fitness_scores_only = [score for score, data in final_results]
+
+    optimal_distribution_index = final_fitness_scores_only.index(min(final_fitness_scores_only))
+    worst_distribution_index = final_fitness_scores_only.index(max(final_fitness_scores_only))
+
+    optimal_distribution = population[optimal_distribution_index]
+    worst_distribution = population[worst_distribution_index]
+    best_run_data = final_results[optimal_distribution_index][1]
+    worst_run_data = final_results[worst_distribution_index][1]
 
     print(f"\nOptimal Vaccine Distribution found: {[f'{x:.2f}' for x in optimal_distribution]}")
     print(f"\nWorst Vaccine Distribution found: {[f'{x:.2f}' for x in worst_distribution]}")

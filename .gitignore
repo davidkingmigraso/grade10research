@@ -1,3 +1,4 @@
 GAMonteCarlo/.vs
 GAMonteCarlo/GAMonteCarlo/bin
 GAMonteCarlo/GAMonteCarlo/obj
+*.npz
