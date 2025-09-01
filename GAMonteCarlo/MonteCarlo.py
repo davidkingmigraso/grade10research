@@ -192,7 +192,7 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
             vaccine_stock_history[aidx].append(vaccine_stock[aidx])
 
         # Increase vaccine_total by vaccine_production_rate
-        if day_counter > vaccination_delay_days and day_counter % vaccination_delay_days == 0:
+        if vaccination_delay_days == 0 or (day_counter > vaccination_delay_days and day_counter % vaccination_delay_days == 0):
             vaccine_total += vaccine_production_rate
 
         for aidx in range(n_areas):
