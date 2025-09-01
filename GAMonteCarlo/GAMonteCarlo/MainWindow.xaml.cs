@@ -187,7 +187,9 @@ namespace GA_MonteCarlo
             AppendOutput($"Replaying simulation from file: {selectedFile}...\n");
 
             string pythonPath = "python";
-            string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MonteCarloReplay.py");
+            string scriptPath = (selectedFile == "genetic_algorithm_performance_data.npz")
+                ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PlotGeneticAlgorithmPerformance.py")
+                : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MonteCarloReplay.py");
 
             if (!File.Exists(scriptPath))
             {
