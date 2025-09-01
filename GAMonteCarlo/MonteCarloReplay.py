@@ -31,6 +31,13 @@ def plot_results(data, label=""):
     vaccine_stock_history = data['vaccine_stock_history']
     agent_history = data['agent_history']
     steps = len(vaccine_stock_history[0]) if len(vaccine_stock_history) > 0 else 0
+    
+    # Load the distribution and format it for the title
+    distribution = data.get('distribution', None) # Use .get() for backward compatibility
+    dist_str = ""
+    if distribution is not None and len(distribution) > 0:
+        dist_str = ", ".join([f'{d*100:.1f}%' for d in distribution])
+        dist_str = f"\nDistribution: {dist_str}"
 
     # --- Animation Replay ---
     fig, ax = plt.subplots(figsize=(7,7))
@@ -50,6 +57,7 @@ def plot_results(data, label=""):
     # Legend for the states
     legend_lines = [plt.Line2D([0],[0], marker='o', color='w', markerfacecolor=state_colors[i], markersize=8) for i in range(6)]
     ax.legend(legend_lines, state_names, loc='upper right', title='States')
+    ax.set_title(f"{dist_str}")
     
     # Day text
     day_text = ax.text(0.02, 0.98, '', transform=ax.transAxes, va='top', fontsize=9)

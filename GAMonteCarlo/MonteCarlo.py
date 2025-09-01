@@ -223,7 +223,7 @@ def run_simulation(vaccine_distribution, area_population, steps, hesitancy_rate,
         'agent_history': agent_history
     }
 
-def save_data(data, filename):
+def save_data(data, filename, distribution=None):
     """Saves the simulation results to a file."""
     # Convert list of dictionaries to a format that can be saved
     hist_per_area_dict = {}
@@ -236,7 +236,8 @@ def save_data(data, filename):
         history_per_area=hist_per_area_dict,
         history_total=data['history_total'],
         vaccine_stock_history=np.array(data['vaccine_stock_history']),
-        agent_history=data['agent_history']
+        agent_history=data['agent_history'],
+        distribution=distribution
     )
 
 def normalize_distribution(dist):
@@ -326,7 +327,7 @@ def run_ga(area_population, steps, generations, population_size, hesitancy_rate,
         best_dist = population[fitness_scores.index(best_fitness)]
         best_fitness_history.append(best_fitness)
 
-        save_data(best_data_this_gen, f"gen_{generation+1}_fitness_{best_fitness_this_gen:.2f}.npz")
+        save_data(best_data_this_gen, f"gen_{generation+1}_fitness_{best_fitness_this_gen:.2f}.npz", distribution=best_dist)
 
         print(f"Generation {generation+1}/{generations}: Best Fitness = {best_fitness:.2f}, Best Dist = {[f'{x:.2f}' for x in best_dist]}")
 
@@ -359,8 +360,8 @@ def run_ga(area_population, steps, generations, population_size, hesitancy_rate,
 
     # Save final best and worst runs for replay
     print("\nSaving final best and worst strategies...")
-    save_data(best_run_data, "best_strategy_results.npz")
-    save_data(worst_run_data, "worst_strategy_results.npz")
+    save_data(best_run_data, "best_strategy_results.npz", distribution=optimal_distribution)
+    save_data(worst_run_data, "worst_strategy_results.npz", distribution=worst_distribution)
 
     print("Simulation data for best and worst strategies saved.")
 
